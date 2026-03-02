@@ -1,0 +1,24 @@
+Protocol: PhotoFolderDelegation
+
+Types:  
+    Agent A,B,P,idp;
+    Data photoFolder, Photos;
+
+Knowledge:
+    A:   A,B,P,idp,pw(A),pk(idp),photoFolder;
+    idp: A,B,P,idp,pw(A),pk(idp),inv(pk(idp));
+    P:   A,B,P,idp,pk(idp),pk(B),pk(P),inv(pk(P));
+    B:   A,B,P,idp,pk(idp),pk(B),inv(pk(B)),pk(P);
+
+    where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
+
+Actions:
+
+A -> idp : A,pw(A),P,B,photoFolder
+idp -> A : {A,P,B,photoFolder}inv(pk(idp))
+A -> P   : {A,P,B,photoFolder}inv(pk(idp))
+P   -> B   : {A,P,B,photoFolder}inv(pk(idp))
+B   -> P   : {Photos}pk(P)
+
+Goals:
+Photos secret between B,P
