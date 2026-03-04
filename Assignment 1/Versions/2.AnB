@@ -1,20 +1,26 @@
 Protocol: PhotoFolderDelegation
 
 Types:  
-    Agent A,B,P,idp;
-    Data photoFolder;
-    Number NB;
-    Function photos, pw;
+Agent A,B,P,idp;
+Data photoFolder;
+Number NB, NP;
+Function photos, pw;
 
 Knowledge:
-    A:   A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),photoFolder,pw(A);
-    P:   A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),inv(pk(P));
-    B:   A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),inv(pk(B)),photos(A);
-    idp: A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),inv(pk(idp)),pw(A);
+    A:   A,B,P,idp,pk(B),pk(P),pk(idp),photoFolder,pw(A);
+    P:   A,B,P,idp,pk(B),pk(P),pk(idp),inv(pk(P));
+    B:   A,B,P,idp,pk(B),pk(P),pk(idp),inv(pk(B)),photos(A);
+    idp: A,B,P,idp,pk(B),pk(P),pk(idp),inv(pk(idp)),pw(A);
 
-    where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
+where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
 
 Actions:
+
+# A asks P for a fresh nonce
+A  ->  P  : A, B
+
+# P responds with challenge nonce
+P  ->  A  : NP
 
 # A initiates by telling B she wants to delegate to P
 A  ->  B  : A, P
@@ -22,18 +28,20 @@ A  ->  B  : A, P
 # B sends challenge nonce
 B  ->  A  : NB
 
-# A requests delegation from idp with B's nonce, authenticating with password
-A  ->  idp : {A, P, B, photoFolder, pw(A), NB}pk(idp)
+# A requests delegation from idp with both nonces
+A  ->  idp : {A, P, B, photoFolder, pw(A), NB, NP}pk(idp)
 
-# idp verifies password and issues signed delegation token with nonce
-idp  ->  A : {{A, P, B, photoFolder, NB}inv(pk(idp))}pk(B)
+# idp verifies password and issues signed delegation token with both nonces
+idp  ->  A : {{A, P, B, photoFolder, NB, NP}inv(pk(idp))}pk(B)
 
 # A forwards token to B
-A  ->  B  : {{A, P, B, photoFolder, NB}inv(pk(idp))}pk(B)
+A  ->  B  : {{A, P, B, photoFolder, NB, NP}inv(pk(idp))}pk(B)
 
 # B verifies idp's signature, checks NB, and sends photos to P
-B  ->  P  : {photos(A)}pk(P)
+# B includes the idp-signed delegation so P can verify authorization and check NP
+B  ->  P  : {{A, P, B, photoFolder, NB, NP}inv(pk(idp)), photos(A)}pk(P)
 
 Goals:
 
-B authenticates idp on A,P,B,photoFolder,NB
+B authenticates idp on A,P,B,photoFolder,NB,NP
+P authenticates idp on A,P,B,photoFolder,NP

@@ -1,0 +1,48 @@
+Protocol: PhotoFolderDelegation
+
+Types:
+    Agent A,B,P,idp;
+    Data photoFolder;
+    Number NB, NA;
+    Function pk, photos, pw;
+
+Knowledge:
+    A:   A,B,P,idp,pk(idp),photoFolder,pw(A);
+    P:   A,B,P,idp,pk(idp),pk(P),inv(pk(P));
+    B:   A,B,P,idp,pk(idp),pk(B),pk(P),inv(pk(B)),photos(A);
+    idp: A,B,P,idp,pk(idp),inv(pk(idp)),pk(B),pk(P),pw(A);
+
+    where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
+
+Actions:
+
+# Sub-protocol: A asks idp for pk(B)
+# Type-flaw distinct: 3-element request, response contains pk() term
+A    ->  idp : {A, B, NA}pk(idp)
+idp  ->  A   : {B, pk(B), NA}inv(pk(idp))
+
+# Main protocol:
+
+# A initiates: plaintext, no secrets
+A    ->  B   : A, P
+
+# B responds with fresh challenge nonce
+B    ->  A   : NB
+
+# A requests token: type-flaw distinct from sub-protocol step 1
+# (contains pw(A), 6 elements vs 3 elements above)
+A    ->  idp : {A, P, B, photoFolder, pw(A), NB}pk(idp)
+
+# idp issues signed token: type-flaw distinct from sub-protocol step 2
+# (no pk() term inside, 5 elements vs 3)
+idp  ->  A   : {A, P, B, photoFolder, NB}inv(pk(idp))
+
+# A wraps token for B: double encryption makes it confidential
+A    ->  B   : {{A, P, B, photoFolder, NB}inv(pk(idp))}pk(B)
+
+# B sends photos: single photos() term, type-flaw distinct from all others
+B    ->  P   : {photos(A)}pk(P)
+
+Goals:
+
+B authenticates idp on A,P,B,photoFolder,NB
