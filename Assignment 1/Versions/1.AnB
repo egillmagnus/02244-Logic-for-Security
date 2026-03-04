@@ -3,30 +3,22 @@ Protocol: PhotoFolderDelegation
 Types:  
     Agent A,B,P,idp;
     Data photoFolder, Photos;
-    Function h, pk;
 
 Knowledge:
     A:   A,B,P,idp,pw(A),pk(idp),photoFolder;
     idp: A,B,P,idp,pw(A),pk(idp),inv(pk(idp));
-    P:   A,B,P,idp,pk(idp);
-    B:   A,B,P,idp,pk(idp),pk(B),inv(pk(B));
+    P:   A,B,P,idp,pk(idp),pk(B),pk(P),inv(pk(P));
+    B:   A,B,P,idp,pk(idp),pk(B),inv(pk(B)),pk(P);
 
     where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
 
 Actions:
 
-[A]  *->*  idp : A,idp,pw(A),P,B,photoFolder
-
-idp  *->*  [A] : A,B,photoFolder,{A,B,photoFolder}inv(pk(idp))
-
-[A]  *->*  P   : A,B,photoFolder,{A,B,photoFolder}inv(pk(idp))
-
-P    *->*  B   : P,B,photoFolder,
-                 A,B,photoFolder,{A,B,photoFolder}inv(pk(idp))
-
-B    *->*  P   : Photos
+A -> idp : A,pw(A),P,B,photoFolder
+idp -> A : {A,P,B,photoFolder}inv(pk(idp))
+A -> P   : {A,P,B,photoFolder}inv(pk(idp))
+P   -> B   : {A,P,B,photoFolder}inv(pk(idp))
+B   -> P   : {Photos}pk(P)
 
 Goals:
-
-B authenticates idp on A
 Photos secret between B,P
