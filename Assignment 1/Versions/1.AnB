@@ -1,24 +1,27 @@
-Protocol: PhotoFolderDelegation
+Protocol: PhotoFolder
 
 Types:  
-    Agent A,B,P,idp;
-    Data photoFolder, Photos;
+    Agent A,B,P;
+    Data photoFolder;
+    Function pk, photos;
 
 Knowledge:
-    A:   A,B,P,idp,pw(A),pk(idp),photoFolder;
-    idp: A,B,P,idp,pw(A),pk(idp),inv(pk(idp));
-    P:   A,B,P,idp,pk(idp),pk(B),pk(P),inv(pk(P));
-    B:   A,B,P,idp,pk(idp),pk(B),inv(pk(B)),pk(P);
+    A:   A,B,P,pk(A),inv(pk(A)),pk(B),pk(P),photoFolder;
+    P:   A,B,P,pk(A),pk(B),pk(P),inv(pk(P));
+    B:   A,B,P,pk(A),pk(B),pk(P),inv(pk(B)),photoFolder,photos(A);
 
-    where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
+    where A!=B, A!=P, B!=P
 
 Actions:
 
-A -> idp : A,pw(A),P,B,photoFolder
-idp -> A : {A,P,B,photoFolder}inv(pk(idp))
-A -> P   : {A,P,B,photoFolder}inv(pk(idp))
-P   -> B   : {A,P,B,photoFolder}inv(pk(idp))
-B   -> P   : {Photos}pk(P)
+A  ->  P  : {{ P, B }inv(pk(A))}pk(P) 
+
+P  ->  A  : { P, B }pk(A)
+
+A  ->  B  : {{ B, P, photoFolder, A }inv(pk(A))}pk(B)
+
+B  ->  P  : {photos(A)}pk(P)
 
 Goals:
-Photos secret between B,P
+
+B authenticates A on P,B,photoFolder

@@ -1,0 +1,39 @@
+Protocol: PhotoFolderDelegation
+
+Types:  
+    Agent A,B,P,idp;
+    Data photoFolder;
+    Number NB;
+    Function photos, pw;
+
+Knowledge:
+    A:   A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),photoFolder,pw(A);
+    P:   A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),inv(pk(P));
+    B:   A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),inv(pk(B)),photos(A);
+    idp: A,B,P,idp,pk(A),pk(B),pk(P),pk(idp),inv(pk(idp)),pw(A);
+
+    where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
+
+Actions:
+
+# A initiates by telling B she wants to delegate to P
+A  ->  B  : A, P
+
+# B sends challenge nonce
+B  ->  A  : NB
+
+# A requests delegation from idp with B's nonce, authenticating with password
+A  ->  idp : {A, P, B, photoFolder, pw(A), NB}pk(idp)
+
+# idp verifies password and issues signed delegation token with nonce
+idp  ->  A : {{A, P, B, photoFolder, NB}inv(pk(idp))}pk(B)
+
+# A forwards token to B
+A  ->  B  : {{A, P, B, photoFolder, NB}inv(pk(idp))}pk(B)
+
+# B verifies idp's signature, checks NB, and sends photos to P
+B  ->  P  : {photos(A)}pk(P)
+
+Goals:
+
+B authenticates idp on A,P,B,photoFolder,NB
