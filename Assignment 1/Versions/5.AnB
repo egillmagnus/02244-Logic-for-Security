@@ -1,0 +1,50 @@
+Protocol: PhotoFolderDelegation_TLS
+
+Types:
+    Agent A,B,P,idp;
+    Data photoFolder;
+    Number NB,NP;
+    Function photos,pw;
+    Format fAskP, fPNonce, fAskB, fBNonce, fDelReq, fDelTok, fDeliver;
+
+Knowledge:
+    A:   A,B,P,idp,pk(idp),photoFolder,pw(A);
+    P:   A,B,P,idp,pk(idp),inv(pk(P));
+    B:   A,B,P,idp,pk(idp),inv(pk(B)),photos(A);
+    idp: A,B,P,idp,pk(idp),inv(pk(idp)),pw(A);
+
+
+where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
+
+Actions:
+
+# TLS channel from A to P, server-authenticated only
+[A]  *->*  P   : fAskP(A,B)
+
+# response on same TLS channel
+P    *->* [A]  : fPNonce(NP)
+
+# TLS channel from A to B
+[A]  *->*  B   : fAskB(A,P)
+
+# response on same TLS channel
+B    *->* [A]  : fBNonce(NB)
+
+# TLS channel from A to idp
+# A knows she is talking to idp, but idp does not yet know who the client is
+[A]  *->*  idp : fDelReq(A,P,B,photoFolder,pw(A),NB,NP)
+
+# idp returns signed delegation token over TLS
+# signature is still needed because A will forward it later
+idp  *->* [A]  : {fDelTok(A,P,B,photoFolder,NB,NP)}inv(pk(idp))
+
+# A forwards the signed token to B over TLS
+[A]  *->*  B   : {fDelTok(A,P,B,photoFolder,NB,NP)}inv(pk(idp))
+
+# B forwards token and photos to P over TLS
+[B]  *->*  P   : fDeliver({fDelTok(A,P,B,photoFolder,NB,NP)}inv(pk(idp)), photos(A))
+
+Goals:
+    B authenticates idp on A,P,B,photoFolder,NB,NP
+    P authenticates idp on A,P,B,photoFolder,NB,NP
+    pw(A) guessable secret between A, idp
