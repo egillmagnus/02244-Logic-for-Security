@@ -1,48 +1,46 @@
-Protocol: PhotoFolderDelegation
+Protocol: PhotoFolderDelegation_Typed
 
 Types:
     Agent A,B,P,idp;
     Data photoFolder;
-    Number NB, NA;
-    Function pk, photos, pw;
+    Number NB,NP;
+    Function photos,pw;
+    Format fAskP, fPNonce, fAskB, fBNonce, fDelReq, fDelTok, fDeliver;
 
 Knowledge:
     A:   A,B,P,idp,pk(idp),photoFolder,pw(A);
-    P:   A,B,P,idp,pk(idp),pk(P),inv(pk(P));
-    B:   A,B,P,idp,pk(idp),pk(B),pk(P),inv(pk(B)),photos(A);
-    idp: A,B,P,idp,pk(idp),inv(pk(idp)),pk(B),pk(P),pw(A);
+    P:   A,B,P,idp,pk(P),pk(idp),inv(pk(P));
+    B:   A,B,P,idp,pk(B),pk(P),pk(idp),inv(pk(B)),photos(A);
+    idp: A,B,P,idp,pk(B),pk(P),pk(idp),inv(pk(idp)),pw(A);
 
-    where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
+where A!=B, A!=P, A!=idp, B!=P, B!=idp, P!=idp
 
 Actions:
 
-# Sub-protocol: A asks idp for pk(B)
-# Type-flaw distinct: 3-element request, response contains pk() term
-A    ->  idp : {A, B, NA}pk(idp)
-idp  ->  A   : {B, pk(B), NA}inv(pk(idp))
+# A asks P for a fresh nonce
+A   ->  P   : fAskP(A,B)
 
-# Main protocol:
+# P responds with challenge nonce
+P   ->  A   : fPNonce(NP)
 
-# A initiates: plaintext, no secrets
-A    ->  B   : A, P
+# A initiates by telling B she wants to delegate to P
+A   ->  B   : fAskB(A,P)
 
-# B responds with fresh challenge nonce
-B    ->  A   : NB
+# B sends challenge nonce
+B   ->  A   : fBNonce(NB)
 
-# A requests token: type-flaw distinct from sub-protocol step 1
-# (contains pw(A), 6 elements vs 3 elements above)
-A    ->  idp : {A, P, B, photoFolder, pw(A), NB}pk(idp)
+# A requests delegation from idp with both nonces
+A   ->  idp : {fDelReq(A,P,B,photoFolder,pw(A),NB,NP)}pk(idp)
 
-# idp issues signed token: type-flaw distinct from sub-protocol step 2
-# (no pk() term inside, 5 elements vs 3)
-idp  ->  A   : {A, P, B, photoFolder, NB}inv(pk(idp))
+# idp issues signed delegation token, encrypted for B
+idp ->  A   : {{fDelTok(A,P,B,photoFolder,NB,NP)}inv(pk(idp))}pk(B)
 
-# A wraps token for B: double encryption makes it confidential
-A    ->  B   : {{A, P, B, photoFolder, NB}inv(pk(idp))}pk(B)
+# A forwards token to B
+A   ->  B   : {{fDelTok(A,P,B,photoFolder,NB,NP)}inv(pk(idp))}pk(B)
 
-# B sends photos: single photos() term, type-flaw distinct from all others
-B    ->  P   : {photos(A)}pk(P)
+# B sends token + photos to P
+B   ->  P   : {fDeliver({fDelTok(A,P,B,photoFolder,NB,NP)}inv(pk(idp)), photos(A))}pk(P)
 
 Goals:
-
-B authenticates idp on A,P,B,photoFolder,NB
+    B authenticates idp on A,P,B,photoFolder,NB,NP
+    P authenticates idp on A,P,B,photoFolder,NB,NP
